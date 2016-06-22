@@ -1,0 +1,56 @@
+#!/usr/bin/env perl
+use Mojolicious::Lite;
+
+# Documentation browser under "/perldoc"
+plugin 'PODRenderer';
+plugin 'RenderFile';
+
+# Upload form in DATA section
+get '/' => 'uploader';
+
+my $filespath = '/home/jfields/Documents/chefdrive/files';
+
+# Multipart upload handler
+post '/upload' => sub {
+  my $self = shift;
+
+  # Check file size
+  return $self->render(text => 'File is too big.', status => 200)
+    if $self->req->is_limit_exceeded;
+
+  # Process uploaded file
+  return $self->redirect_to('form') unless my $file = $self->param('incomingfile');
+  my $size = $file->size;
+  my $name = $file->filename;
+  $file->move_to("$filespath/$name");
+  $self->render(text => "Thanks for uploading $size byte file $name.");
+};
+
+# Download handler
+get '/download' => sub {
+  my $self = shift;
+  my $file = $self->param('name');
+
+  # Serve static file if it exists
+#  if (my $asset = $self->app->static->file("$filespath/$file")) {
+#    $self->res->headers->content_type('image/png');
+#    $self->reply->asset($asset);
+#  }
+  $self->render_file(filepath => "/home/jfields/Documents/chefdrive/files/$file");
+};
+
+
+app->start;
+__DATA__
+
+@@ uploader.html.ep
+<!DOCTYPE html>
+<html>
+  <head><title>Upload!</title></head>
+  <body>
+    %= form_for upload => (enctype => 'multipart/form-data') => begin
+      %= file_field 'incomingfile'
+      %= submit_button 'Upload'
+    % end
+  </body>
+</html>
